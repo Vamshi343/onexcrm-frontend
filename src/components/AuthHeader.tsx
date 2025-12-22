@@ -1,22 +1,44 @@
 // src/components/AuthHeader.tsx
-import { View, Image } from "react-native";
+import React from 'react';
+import { View, Image, StyleSheet } from 'react-native';
 
-export default function AuthHeader() {
+type Props = {
+  showTagline?: boolean; // kept for backward-compat but unused
+};
+
+export default function AuthHeader({ showTagline }: Props) {
   return (
-    <View style={{ alignItems: "center", marginBottom: 10 }}>
-      <Image
-        source={require("../assets/images/1x9.jpg")}
-        style={{
-          width: 230,
-          height: 130,
-          borderRadius: 32,
-          marginTop: 10,
-        //   shadowColor: "#7C3AED",
-          shadowRadius: 18,
-          shadowOpacity: 0.08,
-        }}
-        resizeMode="contain"
-      />
+    <View style={styles.container}>
+      <View style={styles.logoWrapper}>
+        <Image
+          source={require('..//assets/images/1x9.jpg')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  logoWrapper: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  logo: {
+    width: 170,
+    height: 70,
+    borderRadius: 18,
+  },
+});
