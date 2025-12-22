@@ -252,198 +252,117 @@
 
 
 
-
 // src/services/apiClient.ts
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { API_BASE_URL } from "../config/apiRoutes";
 import storageUtil from "./storageUtil";
 
 /**
- * Typed axios instance with request/response interceptors
+ * Axios instance
  */
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 20000,
+  timeout: 30000, // ✅ Android-safe timeout
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// REQUEST INTERCEPTOR - Fixed to properly handle clientId
+/**
+ * REQUEST INTERCEPTOR
+ */
 axiosInstance.interceptors.request.use(
-  async (config: AxiosRequestConfig | any): Promise<AxiosRequestConfig | any> => {
+  async (config: AxiosRequestConfig | any) => {
+    let clientId = 1;
+
     try {
-      // Remove optional chaining ?.() which can cause issues
       const token = await storageUtil.getToken();
       const clientIdStr = await storageUtil.getClientId();
 
-      // console.log('🔍 [apiClient] Retrieved from storage:', { 
-      //   token: token ? 'exists' : 'null', 
-      //   clientIdStr,
-      //   clientIdType: typeof clientIdStr 
-      // });
-
-      // Parse clientId properly - convert string to number
-      let clientId: number;
-      if (clientIdStr && clientIdStr !== 'null' && clientIdStr !== 'undefined') {
-        clientId = parseInt(clientIdStr, 10);
-        // Check if parsing was successful
-        if (isNaN(clientId)) {
-          console.warn('[apiClient] clientId parse failed, using default 1');
-          clientId = 1;
-        }
-      } else {
-        console.warn('[apiClient] No clientId in storage, using default 1');
-        clientId = 1;
+      if (clientIdStr && clientIdStr !== "null" && clientIdStr !== "undefined") {
+        const parsed = parseInt(clientIdStr, 10);
+        if (!isNaN(parsed)) clientId = parsed;
       }
 
-      console.log('🔍 [apiClient] Final clientId:', clientId, 'Type:', typeof clientId);
-
-      // Initialize headers if not exists
       config.headers = config.headers || {};
 
-      // Set Authorization header
       if (token) {
-        // @ts-ignore - Axios header typing can be loose here
         config.headers.Authorization = `Bearer ${token}`;
       }
 
-      // CRITICAL: Set clientid header as NUMBER (not string)
-      // @ts-ignore
-      config.headers.clientid = clientId;
-
-      // console.log('📤 [apiClient] Request headers:', {
-      //   url: config.url,
-      //   method: config.method,
-      //   clientid: config.headers.clientid,
-      //   hasAuth: !!config.headers.Authorization
-      // });
-
-    } catch (e) {
-      console.error("[apiClient] Error in request interceptor:", e);
-      // Fallback: set default clientId even on error
+      // 🔴 IMPORTANT: send clientid as STRING (Android header bug)
+      config.headers.clientid = String(clientId);
+    } catch (err) {
+      console.warn("[apiClient] Request interceptor fallback");
       config.headers = config.headers || {};
-      // @ts-ignore
-      config.headers.clientid = 1;
-      console.warn("[apiClient] Using fallback clientId: 1");
+      config.headers.clientid = "1";
     }
 
     return config;
   },
-  (error) => {
-    console.error("[apiClient] Request interceptor error:", error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// RESPONSE INTERCEPTOR
+/**
+ * RESPONSE INTERCEPTOR
+ */
 axiosInstance.interceptors.response.use(
-  (response) => {
-    // console.log('✅ [apiClient] Response:', {
-    //   url: response.config.url,
-    //   status: response.status,
-    //   dataCount: response.data?.dataCount,
-    //   success: response.data?.success
-    // });
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const status = error?.response?.status;
-    
-    console.error('❌ [apiClient] Response error:', {
-      url: error.config?.url,
+
+    console.error("❌ API Error:", {
+      url: error?.config?.url,
       status,
       message: error.message,
-      data: error.response?.data
     });
 
     if (status === 401) {
-      console.warn('[apiClient] 401 Unauthorized - clearing storage');
       try {
         await storageUtil.clearAll();
-      } catch (e) {
-        console.warn("[apiClient] Failed to clear storage:", e);
-      }
+      } catch {}
     }
 
     return Promise.reject(error);
   }
 );
 
-// ---------------------------
-// Inflight dedupe + logging
-// ---------------------------
-
-const inflight = new Map<string, Promise<AxiosResponse<any>>>();
-
-function buildKey(method: string, url: string, dataOrConfig?: any): string {
-  let body = "";
-  try {
-    if (method.toLowerCase() === "get") {
-      const params = dataOrConfig?.params ?? dataOrConfig;
-      if (params !== undefined) body = JSON.stringify(params);
-    } else {
-      if (dataOrConfig !== undefined) body = JSON.stringify(dataOrConfig);
-    }
-  } catch {
-    try {
-      body = String(dataOrConfig);
-    } catch {
-      body = "";
-    }
-  }
-  return `${method.toUpperCase()}|${url}|${body}`;
-}
-
-function getCallerStack(): string {
-  const err = new Error();
-  if (!err.stack) return "";
-  const lines = err.stack.split("\n").slice(3, 9);
-  return lines.join("\n");
-}
-
-async function request(
+/**
+ * SIMPLE REQUEST WRAPPER
+ * ❌ No inflight dedupe (Android breaks with it)
+ */
+async function request<T = any>(
   method: "get" | "post" | "put" | "delete",
   url: string,
-  dataOrConfig?: any,
-  configFallback?: AxiosRequestConfig
-): Promise<AxiosResponse<any>> {
-  const isGet = method.toLowerCase() === "get";
-  const key = buildKey(method, url, isGet ? dataOrConfig : dataOrConfig);
-
-  // Debug logging
-  try {
-    // console.debug(`[apiClient] ${method.toUpperCase()} ${url} key=${key}`);
-    // console.debug(getCallerStack());
-  } catch {}
-
-  if (inflight.has(key)) {
-    console.debug(`[apiClient] Reusing inflight request for key=${key}`);
-    return inflight.get(key) as Promise<AxiosResponse<any>>;
+  data?: any,
+  config?: AxiosRequestConfig
+): Promise<AxiosResponse<T>> {
+  switch (method) {
+    case "get":
+      return axiosInstance.get(url, data);
+    case "post":
+      return axiosInstance.post(url, data, config);
+    case "put":
+      return axiosInstance.put(url, data, config);
+    case "delete":
+      return axiosInstance.delete(url, config);
+    default:
+      return axiosInstance.request({ method, url, ...(data || {}) });
   }
-
-  const p: Promise<AxiosResponse<any>> = (async () => {
-    try {
-      if (method === "get") return await axiosInstance.get(url, dataOrConfig);
-      if (method === "post") return await axiosInstance.post(url, dataOrConfig, configFallback);
-      if (method === "put") return await axiosInstance.put(url, dataOrConfig, configFallback);
-      if (method === "delete") return await axiosInstance.delete(url, dataOrConfig);
-      return await axiosInstance.request({ method, url, ...(dataOrConfig || {}) });
-    } finally {
-      inflight.delete(key);
-    }
-  })();
-
-  inflight.set(key, p);
-  return p;
 }
 
-// Export same shape as your previous apiClient
+/**
+ * EXPORT
+ */
 const apiClient = {
-  get: (url: string, config?: AxiosRequestConfig) => request("get", url, config),
-  post: (url: string, data?: any, config?: AxiosRequestConfig) => request("post", url, data, config),
-  put: (url: string, data?: any, config?: AxiosRequestConfig) => request("put", url, data, config),
-  delete: (url: string, config?: AxiosRequestConfig) => request("delete", url, config),
+  get: <T = any>(url: string, config?: AxiosRequestConfig) =>
+    request<T>("get", url, config),
+  post: <T = any>(url: string, data?: any, config?: AxiosRequestConfig) =>
+    request<T>("post", url, data, config),
+  put: <T = any>(url: string, data?: any, config?: AxiosRequestConfig) =>
+    request<T>("put", url, data, config),
+  delete: <T = any>(url: string, config?: AxiosRequestConfig) =>
+    request<T>("delete", url, undefined, config),
   axios: axiosInstance,
 };
 
