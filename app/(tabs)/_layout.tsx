@@ -6,8 +6,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Dashboard",
-          tabBarIcon: () => null, // Optionally remove the icon
+          tabBarLabel: () => null, // ❌ remove text
+          tabBarIcon: () => null,
         }}
       />
     </Tabs>
