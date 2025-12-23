@@ -108,13 +108,13 @@ export default function Dashboard({ user, onLogout }: any) {
 
 
  const toggleExpandCategory = (id: string) => {
-  console.log('🔵 TOGGLE CALLED with ID:', id, 'Type:', typeof id);
+ // console.log('🔵 TOGGLE CALLED with ID:', id, 'Type:', typeof id);
   setExpandedCategories((prev) => {
     const newState = {
       ...prev,
       [String(id)]: !prev[String(id)],
     };
-    console.log('🟢 NEW expandedCategories:', newState);
+   // console.log('🟢 NEW expandedCategories:', newState);
     return newState;
   });
 };
@@ -288,11 +288,11 @@ const renderContent = () => {
 
   /* ---------------- CATEGORIES + SUBCATEGORIES (MORE TAB) ---------------- */
   if (selectedMenu === "categories") {
-    console.log('📊 Rendering CategoryList:');
-    console.log('  - categories:', categories.length, categories);
-    console.log('  - subcategories:', subcategories.length, subcategories);
-console.log('🔍 FIRST SUBCATEGORY FULL DATA:', JSON.stringify(subcategories[0], null, 2));
-    console.log('  - expandedCategories:', expandedCategories);
+//     console.log('📊 Rendering CategoryList:');
+//     console.log('  - categories:', categories.length, categories);
+//     console.log('  - subcategories:', subcategories.length, subcategories);
+// console.log('🔍 FIRST SUBCATEGORY FULL DATA:', JSON.stringify(subcategories[0], null, 2));
+//     console.log('  - expandedCategories:', expandedCategories);
     
     if (!loaded.categories || !loaded.subcategories) {
       return <ActivityIndicator size="large" style={{ marginTop: 40 }} />;
