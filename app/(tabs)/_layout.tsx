@@ -1,30 +1,37 @@
-import { Tabs } from "expo-router";
-import { Platform } from "react-native";
+// import { Tabs } from "expo-router";
+// import { View } from "react-native";
 
-export default function TabsLayout() {
-  return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
+// export default function TabsLayout() {
+//   return (
+//     <Tabs
+//       screenOptions={{
+//         headerShown: false,
 
-        // 🔥 THIS IS THE KEY FIX
-        tabBarStyle: {
-          height: 56,
-          paddingBottom: Platform.OS === "android" ? 0 : 10,
-        },
+//         // ⛔ Disable Expo Router bottom inset
+//         tabBarStyle: {
+//           height: 56,
+//           paddingBottom: 0,
+//           marginBottom: 0,
+//           backgroundColor: "#fff",
+//           borderTopWidth: 0,
+//           elevation: 0,
+//         },
 
-        tabBarItemStyle: {
-          paddingVertical: 0,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          tabBarLabel: () => null,
-          tabBarIcon: () => null,
-        }}
-      />
-    </Tabs>
-  );
-}
+//         tabBarItemStyle: {
+//           paddingBottom: 0,
+//         },
+
+//         tabBarBackground: () => (
+//           <View style={{ flex: 1, backgroundColor: "#fff" }} />
+//         ),
+//       }}
+//     >
+//       <Tabs.Screen
+//         name="index"
+//         options={{
+//           tabBarLabel: () => null,
+//         }}
+//       />
+//     </Tabs>
+//   );
+// }
