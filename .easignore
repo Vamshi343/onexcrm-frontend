@@ -1,7 +1,7 @@
-echo .vscode/ > .easignore
-echo .git/ >> .easignore
-echo node_modules/ >> .easignore
-echo .expo/ >> .easignore
-echo dist/ >> .easignore
-echo .DS_Store >> .easignore
-echo *.log >> .easignore
+﻿.vscode/
+.git/
+node_modules/
+.expo/
+dist/
+.DS_Store
+*.log
